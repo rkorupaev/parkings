@@ -1,0 +1,52 @@
+variables:
+  NODE_VERSION_IMAGE: 14.21.1-alpine3.15
+  DEV_BRANCH: "develop"
+  SSH_PORT: "13822"
+  REACT_APP_BASE_URL: /
+
+include:
+  project: 'dev/ci-templates'
+  file: '/frontend/frontend-template.yml'
+
+
+build release static:
+  image: node:${NODE_VERSION_IMAGE}
+  stage: build
+  rules:
+    - if: $CI_COMMIT_TAG
+  cache:
+    key: npm
+    policy: pull-push
+    paths:
+      - .npm/
+  artifacts:
+    paths:
+      - ./build
+    expire_in: 1 hour
+
+  script:
+    - echo "REACT_APP_BASE_URL = ${REACT_APP_BASE_URL}" >> .env
+    - echo "VERSION = ${CI_COMMIT_TAG}" >> .env
+    - npm ci --cache .npm/
+    - CI='false' npm run build
+
+
+
+build release image:
+  image: docker:20.10.14-git
+  stage: build image
+  rules:
+    - if: $CI_COMMIT_TAG
+  needs: ['build release static']
+  tags:
+    - docker_in_docker
+  allow_failure: false
+  script:
+    - docker login ${REGISTRY_ADDR} -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD}
+    - docker build --rm --no-cache -t ${REGISTRY_ADDR}/${CI_PROJECT_PATH} -f docker/Dockerfile .
+    - docker tag  ${REGISTRY_ADDR}/${CI_PROJECT_PATH} ${REGISTRY_ADDR}/${CI_PROJECT_PATH}:release
+    - docker tag  ${REGISTRY_ADDR}/${CI_PROJECT_PATH} ${REGISTRY_ADDR}/${CI_PROJECT_PATH}:$CI_COMMIT_TAG
+
+    - docker push ${REGISTRY_ADDR}/${CI_PROJECT_PATH}:release
+    - docker push ${REGISTRY_ADDR}/${CI_PROJECT_PATH}:$CI_COMMIT_TAG
+

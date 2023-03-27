@@ -1,0 +1,29 @@
+.auth__form {
+  display: flex;
+  flex-direction: column;
+  width: 300px;
+  //min-height: 250px;
+  padding: 20px;
+
+  border: 1px solid grey;
+  border-radius: 10px;
+
+  h2 {
+    margin-top: 0;
+  }
+}
+
+
+.buttons__container {
+  display: flex;
+  margin-top: 15px;
+
+  button {
+    width: 100%;
+    margin-right: 10px;
+
+    &:last-child {
+      margin-right: 0;
+    }
+  }
+}
